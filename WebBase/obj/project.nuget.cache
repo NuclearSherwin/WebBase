@@ -1,0 +1,15 @@
+{
+  "version": 2,
+  "dgSpecHash": "FHrLjBq3zbGH1AsF8WMMXSHzw+reHM4d+7hjN3d5NPi6tIpG0dN4w8yEfGDVeZ5zT0qEK5pm7dE3WtmYapUjlg==",
+  "success": true,
+  "projectFilePath": "A:\\work\\real-projects\\WebBase\\WebBase\\WebBase.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\paika\\.nuget\\packages\\microsoft.extensions.apidescription.server\\3.0.0\\microsoft.extensions.apidescription.server.3.0.0.nupkg.sha512",
+    "C:\\Users\\paika\\.nuget\\packages\\microsoft.openapi\\1.2.3\\microsoft.openapi.1.2.3.nupkg.sha512",
+    "C:\\Users\\paika\\.nuget\\packages\\swashbuckle.aspnetcore\\5.6.3\\swashbuckle.aspnetcore.5.6.3.nupkg.sha512",
+    "C:\\Users\\paika\\.nuget\\packages\\swashbuckle.aspnetcore.swagger\\5.6.3\\swashbuckle.aspnetcore.swagger.5.6.3.nupkg.sha512",
+    "C:\\Users\\paika\\.nuget\\packages\\swashbuckle.aspnetcore.swaggergen\\5.6.3\\swashbuckle.aspnetcore.swaggergen.5.6.3.nupkg.sha512",
+    "C:\\Users\\paika\\.nuget\\packages\\swashbuckle.aspnetcore.swaggerui\\5.6.3\\swashbuckle.aspnetcore.swaggerui.5.6.3.nupkg.sha512"
+  ],
+  "logs": []
+}
