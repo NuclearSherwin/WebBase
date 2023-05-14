@@ -1,12 +1,17 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
+using System.Linq;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 using Common.Constants;
+using Common.Exceptions;
+using Data.Entities.BaseEntity;
 using Data.Entities.User;
 using Data.IRepository.IBaseRepository;
+using Data.Repository;
 using Data.ViewModels.Account;
 using Microsoft.IdentityModel.Tokens;
 using Service.IServices;
@@ -49,62 +54,232 @@ namespace Service.Services
                 throw new Exception("Email need to be verify");
             
             // authentication successful so generate JWT and Refresh tokens
-            var jwtToken = 
+            var jwtToken = GenerateJwtToken(user);
+            var refreshToken = GenerateRefreshToken(ipAddress);
+            
+            // save refresh token
+            if (user.RefreshTokens == null)
+                user.RefreshTokens = new List<RefreshToken>();
+            
+            user.RefreshTokens.Add(refreshToken);
+            
+            // remove old refresh tokens from account
+            RemoveOldRefreshTokens(user);
+
+            await _userRepo.UpdateRefreshToken(user.Id, user.RefreshTokens, refreshToken.Token);
+
+            return new AuthenticateResponse(user, jwtToken, refreshToken.Token);
         }
 
-        public Task<AuthenticateResponse> RefreshToken(string token, string ipAddress)
+        public async Task<AuthenticateResponse> RefreshToken(string token, string ipAddress)
         {
-            throw new System.NotImplementedException();
+            var user = await _userRepo.FirstOrDefaultAsync(u =>
+                u.RefreshTokens.Any(t => t.Token == token) && !u.IsDeleted);
+            
+            // return null if no user found with tokne
+            if (user == null) return null;
+
+            var refreshToken = user.RefreshTokens.Single(r => r.Token == token);
+            
+            // return null if token is no longer active
+            if (!refreshToken.IsActive) return null;
+            
+            // replace old refresh token with a new one and save
+            var newRefreshToken = GenerateRefreshToken(ipAddress);
+            refreshToken.Revoked = DateTime.Now;
+            refreshToken.RevokedByIp = ipAddress;
+            refreshToken.ReplacedByToken = newRefreshToken.Token;
+            user.RefreshTokens.Add(newRefreshToken);
+            
+            RemoveOldRefreshTokens(user);
+
+            await _userRepo.UpdateRefreshToken(user.Id, user.RefreshTokens, ipAddress);
+            
+            // generate new jwt
+            var jwtToken = GenerateJwtToken(user);
+
+            return new AuthenticateResponse(user, jwtToken, newRefreshToken.Token);
         }
 
-        public Task<bool> RevokeToken(string token, string ipAddress)
+        public async Task<bool> RevokeToken(string token, string ipAddress)
         {
-            throw new System.NotImplementedException();
+            var user = await _userRepo.FirstOrDefaultAsync(u =>
+                u.RefreshTokens.Any(t => t.Token == token) && !u.IsDeleted);
+            
+            // return false if no user found with token
+            if (user == null) return false;
+
+            var refreshToken = user.RefreshTokens.Single(r => r.Token == token);
+            
+            // return false if token is not active
+            if (!refreshToken.IsActive) return false;
+            
+            // revoke token and save
+            refreshToken.Revoked = DateTime.Now;
+            refreshToken.RevokedByIp = ipAddress;
+
+            await _userRepo.UpdateRefreshToken(user.Id, user.RefreshTokens, ipAddress);
+
+            return true;
+
         }
 
-        public Task Register(User model, string password, string origin)
+        public async Task Register(User model, string password, string origin)
         {
-            throw new System.NotImplementedException();
+            try
+            {
+                // validate
+                var userList =
+                    await _userRepo.FindAsync(u => u.Email.ToLower() == model.Email.ToLower() && !u.IsDeleted);
+
+                if (userList != null)
+                {
+                    await SendAlreadyRegisterEmail(model.Email.ToLower(), origin);
+                    throw new AppException("" + model.Email.ToLower() + "' is already taken'");
+                }
+
+                if (model.Email == null)
+                    throw new AppException("Email is not empty!");
+                if (model.FirstName == null)
+                    throw new AppException("First name is not empty");
+                if (model.LastName == null)
+                    throw new AppException("Last name is not empty");
+                if (model.PhoneNumber == null)
+                    throw new AppException("Last name is not empty");
+                if (model.Address == null)
+                    throw new AppException("Address is not empty");
+                
+                
+                // hash password
+                Encryption.EncryptPassword(model, password);
+                model.VerificationToken = RandomTokenString();
+                
+                // save user
+                await _userRepo.InsertAsync(model);
+                
+                // send mail
+                await SendVerificationEmail(model, origin);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message);
+                throw;
+            }
         }
 
-        public Task VerifyEmail(string token)
+        public async Task VerifyEmail(string token)
         {
-            throw new System.NotImplementedException();
+            var account = await _userRepo.FirstOrDefaultAsync(u => u.VerificationToken == token);
+
+            if (account == null) throw new AppException("Verification failed");
+            
+            account.Verified = DateTime.Now;
+            account.VerificationToken = null;
+
+            await _userRepo.UpdateAsync(account);
         }
 
-        public Task ForgotPassword(ForgotPasswordRequest model, string origin)
+        public async Task ForgotPassword(ForgotPasswordRequest model, string origin)
         {
-            throw new System.NotImplementedException();
+            var account = await _userRepo.FirstOrDefaultAsync(u => u.Email.ToLower() == model.Email.ToLower());
+            
+            // always return ok response to prevent email enumeration
+            if (account == null) return;
+            
+            // create reset token that expire after 1 day
+            account.ResetToken = RandomTokenString();
+            account.ResetTokenExpires = DateTime.Now.AddDays(1);
+
+            await _userRepo.UpdateAsync(account);
+            
+            // send email
+            await SendPasswordResetEmail(account, origin);
+
         }
 
-        public Task ValidateResetToken(ValidateResetTokenRequest model)
+        public async Task ValidateResetToken(ValidateResetTokenRequest model)
         {
-            throw new System.NotImplementedException();
+            var account =
+                await _userRepo.FirstOrDefaultAsync(u =>
+                    u.ResetToken == model.Token && u.ResetTokenExpires > DateTime.Now);
+
+            if (account == null)
+                throw new AppException("Invalid token");
         }
 
-        public Task ResetPassword(ResetPasswordRequest model)
+        public async Task ResetPassword(ResetPasswordRequest model)
         {
-            throw new System.NotImplementedException();
+            var account = await _userRepo.FirstOrDefaultAsync(u => u.ResetToken == model.Token &&
+                                                                   u.ResetTokenExpires > DateTime.Now);
+
+            if (account == null)
+                throw new AppException("Invalid token");
+            
+            // hash password
+            Encryption.EncryptPassword(account, model.Password);
+            
+            // update password and remove reset token
+            account.PasswordReset = DateTime.Now;
+            account.ResetToken = null;
+            account.ResetTokenExpires = null;
+            account.UpdateAt = DateTime.Now;
+
+            await _userRepo.UpdateAsync(account);
+
         }
 
-        public Task<IEnumerable<User>> GetAll()
+        public async Task<IEnumerable<User>> GetAll()
         {
-            throw new System.NotImplementedException();
+            return await _userRepo.FindListAsync(_ => _.IsDeleted);
         }
 
-        public Task<User> GetById(string id)
+        public async Task<User> GetById(string id)
         {
-            throw new System.NotImplementedException();
+            var result = await GetAccount(id);
+            return result;
         }
 
-        public Task<User> Create(User account, string password)
+        public async Task<User> Create(User account, string password)
         {
-            throw new System.NotImplementedException();
+            // validate
+            if ((await _userRepo.FindAsync(u => u.Email == account.Email)) != null)
+                throw new AppException($"$Email '{account.Email}' is already taken");
+            
+            // map model to new account object
+            account.CreateAt = DateTime.Now;
+            account.Verified = DateTime.Now;
+            
+            // hash password
+            Encryption.EncryptPassword(account, password);
+            // save new user
+            await _userRepo.InsertAsync(account);
+
+            return account;
         }
 
-        public Task<User> Update(string id, UpdateRequest model, string userId)
+        public async Task<User> Update(string id, UpdateRequest model, string userId)
         {
-            throw new System.NotImplementedException();
+            var account = await GetAccount(id);
+            
+            // validate
+            if (account.Email.ToLower() != model.Email.ToLower() && await _userRepo.FindAsync(x => String.Equals(x.Email, model.Email, StringComparison.CurrentCultureIgnoreCase)) != null)
+                throw new AppException($"Email '{model.Email}' is already taken");
+            
+            // hash password if it was enter
+            if (!string.IsNullOrEmpty(model.Password))
+                Encryption.EncryptPassword(account, model.Password);
+            
+            // copy model to account and save
+            account.UpdateAt = DateTime.Now;
+            account.UpdateBy = userId;
+            account.FirstName = model.FirstName;
+            account.LastName = model.LastName;
+            account.DateOfBirth = (DateTime)model.DateOfBirth;
+            account.Address = model.Address;
+
+            await _userRepo.UpdateAsync(account);
+
+            return account;
         }
 
         public Task<User> UpdateSupervisor(string id, UpdateRequest model, string userId)
@@ -112,16 +287,24 @@ namespace Service.Services
             throw new System.NotImplementedException();
         }
 
-        public Task Delete(string id)
+        public async Task Delete(string id)
         {
-            throw new System.NotImplementedException();
+            var account = await GetAccount(id);
+            account.IsDeleted = true;
+            await _userRepo.UpdateAsync(account);
         }
 
-        public Task Activate(string id)
+        public async Task Activate(string id)
         {
-            throw new System.NotImplementedException();
+            var account = await GetDeleteAccount(id);
+            account.IsDeleted = false;
+            await _userRepo.UpdateAsync(account);
         }
 
+        
+        
+        
+        // -------------- helper method ----------------------
         private string GenerateJwtToken(User user)
         {
             var tokenHandler = new JwtSecurityTokenHandler();
@@ -141,7 +324,139 @@ namespace Service.Services
             var token = tokenHandler.CreateToken(tokenDescriptor);
             return tokenHandler.WriteToken(token);
         }
-        
-        
+
+        private RefreshToken GenerateRefreshToken(string ipAddress)
+        {
+            using (var rngCryptoServiceProvider = new RNGCryptoServiceProvider())
+            {
+                var randomBytes = new byte[64];
+                rngCryptoServiceProvider.GetBytes(randomBytes);
+                return new RefreshToken
+                {
+                    Token = Convert.ToBase64String(randomBytes),
+                    Expires = DateTime.Now.AddDays(7),
+                    Created = DateTime.Now,
+                    CreatedByIp = ipAddress
+                };
+            }
+        }
+
+        private void RemoveOldRefreshTokens(User account)
+        {
+            account.RefreshTokens.RemoveAll(r => !r.IsActive
+                                                 && r.Created.AddDays(AppSettings.RefreshTokenTtl) <= DateTime.Now);
+        }
+
+        private string RandomTokenString()
+        {
+            using var rngCryptoServiceProvider = new RNGCryptoServiceProvider();
+            var randomBytes = new byte[40];
+            rngCryptoServiceProvider.GetBytes(randomBytes);
+            // convert random bytes to hex string
+            return BitConverter.ToString(randomBytes).Replace("-", "");
+        }
+
+        private async Task SendVerificationEmail(User account, string origin)
+        {
+            string message;
+            if (!string.IsNullOrEmpty(origin))
+            {
+                var verifyUrl = $"{origin}/verify-email?token={account.VerificationToken}";
+                message = $@"<p>Please click the below link to verify your email address:</p>
+                             <p>
+                                   <a  
+                                    style=""display: inline-block;
+                                            padding: 10px 20px;
+                                            background-color: #00cc66;
+                                            color: #fff;
+                                            text-decoration: none;
+                                            font-weight: bold;
+                                            border: none;
+                                            border-radius: 5px; "" 
+                                               href=""{verifyUrl}"">Click to verify
+                                    </a>
+                                </p>";
+            }
+            else
+            {
+                message = $@"<p>Please use the below token to verify your email address with the <code>/verify-email</code> api route:</p>
+                             <p><code>{account.VerificationToken}</code></p>";
+            }
+            await _sendMailBusiness.SendMailAsync(
+                account.Email,
+                subject: "Sign-up Verification API - Verify Email",
+                $@"<h4>Verify Email</h4>
+                         <p>Thanks for registering!</p>
+                         {message}"
+            );
+        }
+
+
+        private async Task<User> GetAccount(string id)
+        {
+            var account = await _userRepo.FindAsync(u => u.Id == id && !u.IsDeleted);
+            if (account == null) throw new KeyNotFoundException("Account not found");
+            return account;
+        }
+
+        private async Task SendAlreadyRegisterEmail(string email, string origin)
+        {
+            string message;
+            if (!string.IsNullOrEmpty(origin))
+                message = $@"<p>If you don't know your password please visit the <a href=""{origin}/forgot-password"">forgot password</a> page.</p>";
+            else
+                message = "<p>If you don't know your password you can reset it via the <code>/forgot-password</code> api route.</p>";
+
+            await _sendMailBusiness.SendMailAsync(
+                email,
+                "Sign-up Verification API - Email Already Registered",
+                $@"<h4>Email Already Registered</h4>
+                         <p>Your email <strong>{email}</strong> is already registered.</p>
+                         {message}"
+            );
+        }
+
+        private async Task SendPasswordResetEmail(User account, string origin)
+        {
+            string message;
+            if (!string.IsNullOrEmpty(origin))
+            {
+                var resetUrl = $"{origin}/reset-password?token={account.ResetToken}";
+                message = $@"<p>Please click the below link to reset your password, the link will be valid for 1 day:</p>
+                             <p>
+                                <a 
+                                    style=""display: inline-block;
+                                            padding: 10px 20px;
+                                            background-color: #00cc66;
+                                            color: #fff;
+                                            text-decoration: none;
+                                            font-weight: bold;
+                                            border: none;
+                                            border-radius: 5px; "" 
+                                    href=""{resetUrl}"">Reset password
+                                </a>
+                             </p>";
+            }
+            else
+            {
+                message = $@"<p>Please use the below token to reset your password with the <code>/reset-password</code> api route:</p>
+                             <p><code>{account.ResetToken}</code></p>";
+            }
+            
+            await _sendMailBusiness.SendMailAsync(
+                account.Email,
+                subject: "Sign-up Verification API - Reset Password",
+                $@"<h4>Reset Password Email</h4>
+                         {message}"
+            );
+        }
+
+        private async Task<User> GetDeleteAccount(string id)
+        {
+            var account = await _userRepo.FindAsync(u => u.Id == id && u.IsDeleted);
+            if (account == null) throw new KeyNotFoundException("Account not found");
+
+            return account;
+        }
     }
 }

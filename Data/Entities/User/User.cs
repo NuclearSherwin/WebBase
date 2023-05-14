@@ -7,7 +7,7 @@ namespace Data.Entities.User
     {
         public string FirstName { get; set; } // First name of the user
         public string LastName { get; set; } // Last name of the user
-        public string Password { get; set; } // Encrypted password of the user
+        // public string Password { get; set; } // Encrypted password of the user
         public string PhoneNumber { get; set; } // Phone number of the user
         public DateTime DateOfBirth { get; set; } // Date of birth of the user
         public Address Address { get; set; } // Address of the user
