@@ -44,8 +44,8 @@ namespace Service.Services
 
             try
             {
-                smtp.Connect(_mailBusinessSettings.Host, _mailBusinessSettings.Port, SecureSocketOptions.StartTls);
-                smtp.Authenticate(_mailBusinessSettings.Mail, _mailBusinessSettings.Password);
+                await smtp.ConnectAsync(_mailBusinessSettings.Host, _mailBusinessSettings.Port, SecureSocketOptions.StartTls);
+                await smtp.AuthenticateAsync(_mailBusinessSettings.Mail, _mailBusinessSettings.Password);
                 await smtp.SendAsync(email);
             }
             catch (Exception exception)
@@ -59,7 +59,7 @@ namespace Service.Services
                 _logger.LogError(exception.Message);
             } 
             
-            smtp.Disconnect(true);
+            await smtp.DisconnectAsync(true);
             _logger.LogInformation("Send mail to " + mailContent.To);
         }
 
