@@ -13,6 +13,7 @@ using Service.IServices;
 using Service.Services;
 using Service.Utility;
 using WebBase.Configurations;
+using WebBase.Initializer;
 
 namespace WebBase.Extensions
 {
@@ -20,7 +21,7 @@ namespace WebBase.Extensions
     {
         public static IServiceCollection AddService(this IServiceCollection service)
         {
-            // context 
+            // context
             service.AddSingleton<IMongoContext, MongoContext>();
             
             // repository
@@ -31,11 +32,12 @@ namespace WebBase.Extensions
             service.AddTransient<ISendMailBusinessService, SendMailBusinessService>();
             service.AddScoped<IUserService, UserService>();
             service.AddScoped<IJwtUtils, JwtUtils>();
+            service.AddScoped<IDbInitializer, DbInitializer>();
 
             return service;
         }
         
-         public static IServiceCollection AddAutoMapper(this IServiceCollection service)
+        public static IServiceCollection AddAutoMapper(this IServiceCollection service)
         {
             //auto mapper config
             var mapper = MappingConfig.RegisterMap().CreateMapper();
@@ -48,19 +50,19 @@ namespace WebBase.Extensions
         {
             service.AddCors(options =>
             {
-                options.AddPolicy("Policy",
-                    builder =>
-                    {
-                        builder
-                            .WithOrigins(AppSettings.Cors)
-                            .AllowAnyMethod()
-                            .AllowAnyHeader()
-                            .AllowCredentials();
-                    });
+                options.AddPolicy("Policy", builder =>
+                {
+                    var corsOrigins = AppSettings.CORS ?? new string[0]; // Null check and fallback to an empty array
+                    builder.WithOrigins(corsOrigins)
+                        .AllowAnyMethod()
+                        .AllowAnyHeader()
+                        .AllowCredentials();
+                });
             });
-           
+
             return service;
         }
+
 
         public static IServiceCollection AddSwagger(this IServiceCollection service)
         {
@@ -105,13 +107,11 @@ namespace WebBase.Extensions
         
         public static IServiceCollection BackgroundService(this IServiceCollection services)
         {
-            // // background service
+            // background service
             // services.AddHostedService<AppointmentSenderService>();
            
             return services;
         }
-        
-        
         
         public static IServiceCollection MailSenderService(this IServiceCollection services, IConfiguration configuration)
         {

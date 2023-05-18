@@ -9,7 +9,7 @@ using Service.Utility;
 
 namespace Service.Services
 {
-    public abstract class SendMailErrorService : ISendMailErrorService
+    public class SendMailErrorService : ISendMailErrorService
     {
         private readonly MailErrorSettings _mailErrorSettings;
         private readonly ILogger<SendMailErrorService> _logger;

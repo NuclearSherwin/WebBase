@@ -55,13 +55,15 @@ namespace WebBase
                 app.UseSwagger();
                 app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "WebBase v1"));
             }
-
-            app.UseHttpsRedirection();
+            
+            app.UserExceptionMiddleWare(env);
 
             app.UseRouting();
             
             dbInitializer.Initialize();
-
+            
+            app.UseHttpsRedirection();
+            
             app.UseCors("Policy");
             
             // custom jwt auth middleware
