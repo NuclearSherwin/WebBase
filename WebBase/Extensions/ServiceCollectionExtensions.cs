@@ -68,7 +68,7 @@ namespace WebBase.Extensions
         {
             service.AddSwaggerGen(c =>
             {
-                c.SwaggerDoc("v1", new OpenApiInfo { Title = "Web api Duoc Si Thau Dau", Version = "v1" });
+                c.SwaggerDoc("v1", new OpenApiInfo { Title = "PayShip2.0", Version = "v1" });
 
                 c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
                 {

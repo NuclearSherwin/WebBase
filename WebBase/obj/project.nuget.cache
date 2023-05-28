@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "3X5/ePyWv/EIiRW0cjk4iytdOEfncjg4zY0KVqbP9fTJGQPD0VnH0PmmYbUoUYLJf98UxMtCZCY9IqKagB0izw==",
+  "dgSpecHash": "7H1/eyVSPZjUrAq3QvsGgevwMsw1zgn4jqWJedA5RctU7G0tIG+amIvE+k3gk0azKjuBszuEvn3xEuXth+YtAQ==",
   "success": true,
-  "projectFilePath": "A:\\work\\real-projects\\WebBase\\WebBase\\WebBase.csproj",
+  "projectFilePath": "Z:\\work\\web\\WebBase\\WebBase\\WebBase.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\paika\\.nuget\\packages\\automapper\\12.0.1\\automapper.12.0.1.nupkg.sha512",
     "C:\\Users\\paika\\.nuget\\packages\\automapper.extensions.microsoft.dependencyinjection\\12.0.1\\automapper.extensions.microsoft.dependencyinjection.12.0.1.nupkg.sha512",

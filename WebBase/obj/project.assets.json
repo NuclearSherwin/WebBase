@@ -4393,11 +4393,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "A:\\work\\real-projects\\WebBase\\WebBase\\WebBase.csproj",
+      "projectUniqueName": "Z:\\work\\web\\WebBase\\WebBase\\WebBase.csproj",
       "projectName": "WebBase",
-      "projectPath": "A:\\work\\real-projects\\WebBase\\WebBase\\WebBase.csproj",
+      "projectPath": "Z:\\work\\web\\WebBase\\WebBase\\WebBase.csproj",
       "packagesPath": "C:\\Users\\paika\\.nuget\\packages\\",
-      "outputPath": "A:\\work\\real-projects\\WebBase\\WebBase\\obj\\",
+      "outputPath": "Z:\\work\\web\\WebBase\\WebBase\\obj\\",
       "projectStyle": "PackageReference",
       "configFilePaths": [
         "C:\\Users\\paika\\AppData\\Roaming\\NuGet\\NuGet.Config",
@@ -4414,11 +4414,11 @@
         "net5.0": {
           "targetAlias": "net5.0",
           "projectReferences": {
-            "A:\\work\\real-projects\\WebBase\\Data\\Data.csproj": {
-              "projectPath": "A:\\work\\real-projects\\WebBase\\Data\\Data.csproj"
+            "Z:\\work\\web\\WebBase\\Data\\Data.csproj": {
+              "projectPath": "Z:\\work\\web\\WebBase\\Data\\Data.csproj"
             },
-            "A:\\work\\real-projects\\WebBase\\Service\\Service.csproj": {
-              "projectPath": "A:\\work\\real-projects\\WebBase\\Service\\Service.csproj"
+            "Z:\\work\\web\\WebBase\\Service\\Service.csproj": {
+              "projectPath": "Z:\\work\\web\\WebBase\\Service\\Service.csproj"
             }
           }
         }
