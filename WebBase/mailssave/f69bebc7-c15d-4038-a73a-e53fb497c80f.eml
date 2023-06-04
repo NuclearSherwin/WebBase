@@ -1,0 +1,25 @@
+From: DigitalShop <digitalstore@gmail.com>
+Date: Sun, 04 Jun 2023 21:48:19 +0700
+Subject: Sign-up Verification API - Verify Email
+Message-Id: <UK5G79FA4KU4.S84H1GOOJ8881@desktop-hk54oq9>
+Sender: DigitalShop <digitalstore@gmail.com>
+To: user@example.com
+MIME-Version: 1.0
+Content-Type: text/html; charset=utf-8
+
+<h4>Verify Email</h4>
+                         <p>Thanks for registering!</p>
+                         <p>Please click the below link to verify your email address:</p>
+                             <p>
+                                   <a  
+                                    style="display: inline-block;
+                                            padding: 10px 20px;
+                                            background-color: #00cc66;
+                                            color: #fff;
+                                            text-decoration: none;
+                                            font-weight: bold;
+                                            border: none;
+                                            border-radius: 5px; " 
+                                               href="https://localhost:5001/verify-email?token=C77D97A9952CC27E368637B19673CCE86E8182693C58D138E396DE6C445FA2C17D255D8BE6A94273">Click to verify
+                                    </a>
+                                </p>
